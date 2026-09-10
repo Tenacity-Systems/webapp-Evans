@@ -1,0 +1,64 @@
+# Bootcamp scripts
+push-to-all-student.sh
+push-files-to-repos.sh
+push-to-existing-repos.sh
+add-collaborators.sh
+*.sh
+
+# Git
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+venv/
+env/
+ENV/
+.venv
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Keys and secrets
+keys/
+*.pem
+*.key
+*.pkcs7
+
+# Documentation
+README.md
+*.md
+docs/
+
+# Tests
+tests/
+*.test.js
+*.spec.js

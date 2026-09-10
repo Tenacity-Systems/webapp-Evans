@@ -1,0 +1,47 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+    image: pki-frontend:latest
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./api
+    image: pki-api:latest
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB: pki_cloud
+    expose:
+      - "5000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:8
+    environment:
+      MONGO_INITDB_DATABASE: pki_cloud
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand('ping').ok\" | grep 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  mongo_data:

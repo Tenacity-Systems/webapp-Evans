@@ -1,0 +1,42 @@
+# Bootcamp scripts
+push-to-all-student.sh
+push-files-to-repos.sh
+push-to-existing-repos.sh
+add-collaborators.sh
+*.sh
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+ENV/
+.venv
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Docker
+*.pid
+*.lock
+
+# Keys and secrets
+keys/
+*.pem
+*.key
+*.pkcs7
