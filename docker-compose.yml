@@ -31,7 +31,7 @@ services:
     restart: unless-stopped
 
   mongo:
-    image: mongo:8
+    image: mongo:8.0.4
     environment:
       MONGO_INITDB_DATABASE: pki_cloud
     volumes:
