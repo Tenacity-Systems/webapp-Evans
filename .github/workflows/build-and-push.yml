@@ -1,9 +1,10 @@
-name: Build and Push image
+name: Tenacity CI/CD
 
 on:
   push:
     branches:
       - main
+
   pull_request:
     branches:
       - main
@@ -11,22 +12,21 @@ on:
 permissions:
   contents: read
 
-
 jobs:
   test-api:
-    name: Testing Api
+    name: Test API
     runs-on: ubuntu-latest
 
     steps:
-      - name: checkout code
+      - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Set up python
+      - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependecy-path: api/requirements.txt
+          cache-dependency-path: api/requirements.txt
 
       - name: Install dependencies
         run: |
@@ -34,51 +34,49 @@ jobs:
           pip install -r api/requirements.txt
           pip install pytest
 
-      - name: Run API pytest
-        working-directory: api
-        run: pytest -v  
+      - name: Run API tests
+        run: pytest api/test_app.py -v
 
-   build-and-push:
-     name: Build and push images
-     runs-on: ubuntu-latest
-     needs: test-api
+  build-and-push:
+    name: Build and Push Images
+    runs-on: ubuntu-latest
+    needs: test-api
 
-     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
-     steps:
-       - name: checkout code
-         uses: actions/checkout@v7
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
 
       - name: Log in to Docker Hub
-        uses: docker/login-actions@v4
+        uses: docker/login-action@v4
         with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build API  image
+      - name: Build API image
         run: |
           docker build \
-            -t ${{ vars.DOCKERHUB_USERNAME }}/tenacity-api:${{ github.sha }}
-            -t ${{ vars.DOCKERHUB_USERNAME }}/tenacity-api:latest \
+            -t "${{ secrets.DOCKERHUB_USERNAME }}/tenacity-api:${{ github.sha }}" \
+            -t "${{ secrets.DOCKERHUB_USERNAME }}/tenacity-api:latest" \
+            ./api
+
+      - name: Build frontend image
+        run: |
+          docker build \
+            -t "${{ secrets.DOCKERHUB_USERNAME }}/tenacity-frontend:${{ github.sha }}" \
+            -t "${{ secrets.DOCKERHUB_USERNAME }}/tenacity-frontend:latest" \
             ./frontend
 
-      - name: Push API image
+      - name: Push API images
         run: |
-          docker push ${{ vars.DOCKERHUB_USERNAME }}/tenacity-api:${{ github.sha }}
-          docker push ${{ vars.DOCKERHUB_USERNAME }}/tenacity-api:latest
+          docker push "${{ secrets.DOCKERHUB_USERNAME }}/tenacity-api:${{ github.sha }}"
+          docker push "${{ secrets.DOCKERHUB_USERNAME }}/tenacity-api:latest"
 
       - name: Push frontend images
-        run:
-          docker push ${{ vars.DOCKERHUB_USERNAME }}/tenacity-frontend:${{ github.sha }}
-          docker push ${{ vars.DOCKERHUB_USERNAME }}/tenacity-frontend:latest
-
-      - name: List Directories
         run: |
-          pwd
-          ls -la
-
-      - name: List docker images
-        run: docker images
+          docker push "${{ secrets.DOCKERHUB_USERNAME }}/tenacity-frontend:${{ github.sha }}"
+          docker push "${{ secrets.DOCKERHUB_USERNAME }}/tenacity-frontend:latest"
    
 
 
