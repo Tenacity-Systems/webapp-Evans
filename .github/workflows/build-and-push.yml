@@ -1,4 +1,4 @@
-name: Tenacity CI/CD
+name: Tenacity CI
 
 on:
   push:
