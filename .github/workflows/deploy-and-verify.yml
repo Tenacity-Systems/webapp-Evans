@@ -1,4 +1,4 @@
-name: Deploying the Tenacity app
+name: Tenacity CD
 
 on:
   workflow_run:
@@ -9,9 +9,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-
-permisions:
-  contents: read
   
 
 jobs:
@@ -37,7 +34,7 @@ jobs:
         run: docker pull ${{ vars.DOCKERHUB_USER }}/tenacity-api:${{ github.event.workflow_run.head_sha }}
 
       - name: Start application
-        run: docker compose up -d --build
+        run: docker compose up -d 
 
       - name: Wait for application
         run: sleep 20 
