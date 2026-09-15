@@ -1,0 +1,64 @@
+name: Deploying the Tenacity app
+
+on:
+  workflow_run:
+    workflows:
+      - "Tenacity CI"
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+permisions:
+  contents: read
+  
+
+jobs:
+  deploy-and-verify:
+    name: Deploy and verify API application
+    runs-on: self-hosted
+
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-actions@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USER }} 
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Pull API docker image
+        run: docker pull ${{ vars.DOCKERHUB_USER }}/tenacity-api:${{ github.event.workflow_run.head_sha }}
+
+      - name: Start application
+        run: docker compose up -d --build
+
+      - name: Wait for application
+        run: sleep 20 
+      
+      - name: Show running containers
+        run: docker compose ps 
+
+      - name: Verify frontend
+        run: curl --fail http://localhost:${{ vars.HOST_PORT }}
+
+      - name: Verify API
+        run: curl --fail http://localhost:${{ vars.HOST_PORT }}
+        
+      - name: Show logs
+        run: docker compose logs
+
+      
+
+      
+
+
+
+
+
+
