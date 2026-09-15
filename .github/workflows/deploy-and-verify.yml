@@ -49,7 +49,7 @@ jobs:
         run: curl --fail http://localhost:${{ vars.HOST_PORT }}
         
       - name: Show logs
-        run: docker compose logs
+        run: docker compose logs --tail=50
 
       
 
