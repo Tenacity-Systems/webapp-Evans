@@ -1,3 +1,7 @@
+
+
+
+      
 name: Tenacity CD
 
 on:
@@ -15,7 +19,9 @@ concurrency:
 
 jobs:
   deploy-and-verify:
+    name: Deploy and verify on EC2
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     if: >
       github.event.workflow_run.conclusion == 'success' &&
@@ -35,64 +41,65 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
           persist-credentials: false
 
+      - name: Validate deployment settings
+        shell: bash
+        run: |
+          test -n "$EC2_HOST" || { echo "EC2_HOST is missing"; exit 1; }
+          test -n "$EC2_USER" || { echo "EC2_USER is missing"; exit 1; }
+          test -n "$DOCKERHUB_USERNAME" || { echo "DOCKERHUB_USERNAME variable is missing"; exit 1; }
+
+          [[ "$DOCKERHUB_USERNAME" =~ ^[a-z0-9_-]+$ ]] || { echo "Invalid Docker Hub username"; exit 1; }
+          [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid commit SHA"; exit 1; }
+
+          test -f docker-compose.ec2.yml || { echo "docker-compose.ec2.yml is missing"; exit 1; }
+
       - name: Configure SSH key
+        shell: bash
         env:
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
         run: |
+          test -n "$EC2_SSH_KEY" || { echo "EC2_SSH_KEY is missing"; exit 1; }
+
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/ec2_key
+          printf '%s\n' "$EC2_SSH_KEY" | tr -d '\r' > ~/.ssh/ec2_key
           chmod 600 ~/.ssh/ec2_key
 
       - name: Copy deployment file to EC2
+        shell: bash
         run: |
-          ssh -i ~/.ssh/ec2_key \
-            -o StrictHostKeyChecking=accept-new \
-            "$EC2_USER@$EC2_HOST" \
-            'mkdir -p ~/tenacity'
+          ssh -i ~/.ssh/ec2_key -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new "$EC2_USER@$EC2_HOST" 'mkdir -p ~/tenacity'
 
-          scp -i ~/.ssh/ec2_key \
-            -o StrictHostKeyChecking=yes \
-            docker-compose.ec2.yml \
-            "$EC2_USER@$EC2_HOST:tenacity/docker-compose.ec2.yml"
+          scp -i ~/.ssh/ec2_key -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes docker-compose.ec2.yml "$EC2_USER@$EC2_HOST:tenacity/docker-compose.ec2.yml"
 
       - name: Deploy and verify on EC2
+        shell: bash
         run: |
-          [[ "$DOCKERHUB_USERNAME" =~ ^[a-z0-9_-]+$ ]]
-          [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]]
-
-          ssh -i ~/.ssh/ec2_key \
-            -o StrictHostKeyChecking=yes \
-            "$EC2_USER@$EC2_HOST" \
-            "bash -s -- '$DOCKERHUB_USERNAME' '$IMAGE_TAG'" <<'REMOTE'
+          ssh -i ~/.ssh/ec2_key -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes "$EC2_USER@$EC2_HOST" "bash -s -- '$DOCKERHUB_USERNAME' '$IMAGE_TAG'" <<'REMOTE'
           set -euo pipefail
 
           export DOCKERHUB_USERNAME="$1"
           export IMAGE_TAG="$2"
+
           cd ~/tenacity
 
           docker --version
           docker compose version
+          docker info > /dev/null
 
           trap 'docker compose -f docker-compose.ec2.yml logs --tail=50' ERR
 
+          docker compose -f docker-compose.ec2.yml config --quiet
           docker compose -f docker-compose.ec2.yml pull
-          docker compose -f docker-compose.ec2.yml up \
-            -d --no-build --wait --wait-timeout 180
-
+          docker compose -f docker-compose.ec2.yml up -d --no-build --wait --wait-timeout 180
           docker compose -f docker-compose.ec2.yml ps
-          curl --fail --retry 5 --retry-connrefused \
-            --retry-delay 3 http://localhost:80/
+
+          curl --fail --retry 5 --retry-connrefused --retry-delay 3 --max-time 15 http://localhost:80/
           REMOTE
 
       - name: Remove SSH key
         if: always()
+        shell: bash
         run: rm -f ~/.ssh/ec2_key
-
-      
-
-
-
-
 
 
