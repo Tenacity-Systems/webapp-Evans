@@ -29,8 +29,8 @@ jobs:
       github.event.workflow_run.head_repository.full_name == github.repository
 
     env:
-      EC2_HOST: ${{ secrets.EC2_HOST }}
-      EC2_USER: ${{ secrets.EC2_USER }}
+      EC2_HOST: ${{ vars.EC2_HOST }}
+      EC2_USER: ${{ vars.EC2_USER }}
       DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
       IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
 
