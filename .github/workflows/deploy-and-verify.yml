@@ -20,7 +20,7 @@ concurrency:
 jobs:
   deploy-and-verify:
     name: Deploy and verify on EC2
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 15
 
     if: >
