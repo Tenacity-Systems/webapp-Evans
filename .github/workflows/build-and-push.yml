@@ -60,7 +60,7 @@ jobs:
           docker build \
             -t "${{ vars.DOCKERHUB_USERNAME }}/tenacity-api:${{ github.sha }}" \
             -t "${{ vars.DOCKERHUB_USERNAME }}/tenacity-api:latest" \
-            .
+            ./api
 
       - name: Build frontend image
         run: |
