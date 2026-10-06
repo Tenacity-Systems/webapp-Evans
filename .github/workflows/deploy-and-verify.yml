@@ -78,6 +78,7 @@ jobs:
 
           export DOCKERHUB_USERNAME="$1"
           export IMAGE_TAG="$2"
+          cd~/tenancity
           docker compose version
           docker info > /dev/null
 
