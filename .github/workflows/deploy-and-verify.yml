@@ -2,7 +2,7 @@
 
 
       
-name: Tenacity CD
+name: Tenacity Cd
 
 on:
   workflow_run:
