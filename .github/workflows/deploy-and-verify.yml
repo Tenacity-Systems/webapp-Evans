@@ -92,7 +92,7 @@ jobs:
           docker compose -f docker-compose.ec2.yml up -d --no-build --wait --wait-timeout 180
           docker compose -f docker-compose.ec2.yml ps
 
-          curl --fail --retry 5 --retry-connrefused --retry-delay 3 --max-time 15 http://localhost:8080/
+          curl --fail --retry 5 --retry-connrefused --retry-delay 3 --max-time 15 http://localhost:80/
           REMOTE
 
       - name: Remove SSH key
