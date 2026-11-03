@@ -102,6 +102,25 @@ def create_enquiry():
         "id": str(result.inserted_id),
     }), 201
 
+@app.get("/api/live")
+def live():
+    return jsonify({"status": "alive"}), 200
+
+
+@app.get("/api/ready")
+def ready():
+    try:
+        client.admin.command("ping")
+        return jsonify({
+            "status": "ready",
+            "database": "ok"
+        }), 200
+    except Exception:
+        return jsonify({
+            "status": "not ready",
+            "database": "unavailable"
+        }), 503
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
