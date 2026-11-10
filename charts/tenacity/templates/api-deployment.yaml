@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.api.replicas }}
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      imagePullSecrets:
+        - name: dockerhub-pull
+      containers:
+        - name: api
+          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          startupProbe:
+            httpGet:
+              path: /api/live
+              port: 5000
+            periodSeconds: 5
+            failureThreshold: 18
+          readinessProbe:
+            httpGet:
+              path: /api/ready
+              port: 5000
+            periodSeconds: 5
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/live
+              port: 5000
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - configMapRef:
+                name: api-config
+          resources:
+            requests:
+             cpu: "50m"
+             memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
