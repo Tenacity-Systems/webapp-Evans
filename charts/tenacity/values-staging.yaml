@@ -1,6 +1,6 @@
 api:
   image:
-    tag: "37dfcbdf98df114a3804adcbd9e8cf9f1dc92312"
+    tag: "08f1a8588aef41bc8ca5d790b80be1c693efee96"
 frontend:
   image:
     tag: "08f1a8588aef41bc8ca5d790b80be1c693efee96"
