@@ -1,4 +1,5 @@
 api:
+  mongoSecretName: tenacity-mongo
   image:
     tag: "08f1a8588aef41bc8ca5d790b80be1c693efee96"
 frontend:

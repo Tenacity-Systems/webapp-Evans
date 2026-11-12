@@ -38,17 +38,23 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 3
-
-
           ports:
             - containerPort: 5000
+          {{- if .Values.api.mongoSecretName }}
+          env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.api.mongoSecretName | quote }}
+                  key: MONGO_URI
+          {{- end }}
           envFrom:
             - configMapRef:
                 name: api-config
           resources:
             requests:
-             cpu: "50m"
-             memory: "64Mi"
+              cpu: "50m"
+              memory: "64Mi"
             limits:
               cpu: "250m"
               memory: "256Mi"
