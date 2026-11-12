@@ -4,5 +4,7 @@ metadata:
   name: api-config
   namespace: {{ .Release.Namespace }}
 data:
-  MONGO_URI: "mongodb://mongo:27017"
   MONGO_DB: "pki_cloud"
+  {{- if not .Values.api.mongoSecretName }}
+  MONGO_URI: "mongodb://mongo:27017"
+  {{- end }}
