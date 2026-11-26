@@ -7,17 +7,17 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: tenacity-minikube-deployment
+  group: tenacity-gitops-update
   cancel-in-progress: false
 
 jobs:
-  deploy-and-verify:
-    name: Deploy and verify with Helm
-    runs-on: [self-hosted, Linux, X64, tenacity-minikube]
-    timeout-minutes: 15
+  update-image-tag:
+    name: Update image tag for Argo CD
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     if: >
       github.event.workflow_run.conclusion == 'success' &&
@@ -25,125 +25,40 @@ jobs:
       github.event.workflow_run.head_repository.full_name == github.repository
 
     env:
-      DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
       IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
-      KUBECONFIG: /home/evans-a/.kube/config
-
-    defaults:
-      run:
-        shell: bash
 
     steps:
-      - name: Checkout successful CI commit
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          persist-credentials: false
+          ref: main
 
-      - name: Validate settings and cluster access
+      - name: Validate image tag
+        run: '[[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]]'
+
+      - name: Update image tags in values.yaml
         run: |
           set -euo pipefail
-
-          test -n "$DOCKERHUB_USERNAME" || {
-            echo "DOCKERHUB_USERNAME is missing"
-            exit 1
-          }
-
-          [[ "$DOCKERHUB_USERNAME" =~ ^[a-z0-9_-]+$ ]]
-          [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]]
-
-          command -v kubectl
-          command -v helm
-          command -v curl
-
-          helm version --short
-          kubectl --context=minikube get nodes
-          kubectl --context=minikube get namespace tenacity
-          kubectl --context=minikube get pvc mongo-data -n tenacity
-
-      - name: Create or update Docker Hub pull Secret
-        env:
-          DOCKERHUB_PULL_TOKEN: ${{ secrets.DOCKERHUB_PULL_TOKEN }}
-        run: |
-          set -euo pipefail
-
-          test -n "$DOCKERHUB_PULL_TOKEN" || {
-            echo "DOCKERHUB_PULL_TOKEN is missing"
-            exit 1
-          }
-
-          kubectl --context=minikube create secret docker-registry dockerhub-pull \
-            --namespace=tenacity \
-            --docker-server=https://index.docker.io/v1/ \
-            --docker-username="$DOCKERHUB_USERNAME" \
-            --docker-password="$DOCKERHUB_PULL_TOKEN" \
-            --dry-run=client -o yaml |
-            kubectl --context=minikube apply -f -
+          yq -i '.api.image.tag = strenv(IMAGE_TAG) | .frontend.image.tag = strenv(IMAGE_TAG)' \
+            charts/tenacity/values.yaml
+          git diff charts/tenacity/values.yaml
 
       - name: Validate Helm chart
         run: |
           set -euo pipefail
-
           helm lint ./charts/tenacity
+          helm template tenacity ./charts/tenacity --namespace tenacity > /dev/null
 
-          helm template tenacity ./charts/tenacity \
-            --namespace tenacity \
-            --set-string api.image.repository="docker.io/$DOCKERHUB_USERNAME/tenacity-api" \
-            --set-string api.image.tag="$IMAGE_TAG" \
-            --set-string frontend.image.repository="docker.io/$DOCKERHUB_USERNAME/tenacity-frontend" \
-            --set-string frontend.image.tag="$IMAGE_TAG" |
-            kubectl --context=minikube apply --dry-run=server -f -
-
-      - name: Deploy with Helm
+      - name: Commit and push new tag
         run: |
           set -euo pipefail
-
-          helm upgrade --install tenacity ./charts/tenacity \
-            --kube-context minikube \
-            --namespace tenacity \
-            --set-string api.image.repository="docker.io/$DOCKERHUB_USERNAME/tenacity-api" \
-            --set-string api.image.tag="$IMAGE_TAG" \
-            --set-string frontend.image.repository="docker.io/$DOCKERHUB_USERNAME/tenacity-frontend" \
-            --set-string frontend.image.tag="$IMAGE_TAG" \
-            --wait \
-            --timeout 5m
-
-      - name: Verify frontend and API through Service
-        run: |
-          set -euo pipefail
-
-          kubectl --context=minikube port-forward \
-            -n tenacity service/frontend 18081:80 \
-            > "$RUNNER_TEMP/tenacity-port-forward.log" 2>&1 &
-
-          forward_pid=$!
-          trap 'kill "$forward_pid" 2>/dev/null || true' EXIT
-
-          curl --fail --silent --show-error \
-            --retry 10 --retry-connrefused --retry-delay 2 \
-            --connect-timeout 5 --max-time 15 \
-            http://127.0.0.1:18081/ > /dev/null
-
-          curl --fail --silent --show-error \
-            --retry 5 --retry-connrefused --retry-delay 2 \
-            --connect-timeout 5 --max-time 15 \
-            http://127.0.0.1:18081/api/ready
-
-      - name: Show Helm release
-        if: always()
-        run: |
-          helm status tenacity \
-            --kube-context minikube \
-            --namespace tenacity
-
-      - name: Show deployment status
-        if: always()
-        run: |
-          kubectl --context=minikube get deployments,pods,services,pvc \
-            -n tenacity
-
-      - name: Show troubleshooting events
-        if: failure()
-        run: |
-          kubectl --context=minikube get events -n tenacity \
-            --sort-by=.metadata.creationTimestamp
+          if git diff --quiet; then
+            echo "Image tag already up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add charts/tenacity/values.yaml
+          git commit -m "Deploy ${IMAGE_TAG::7} [skip ci]"
+          git pull --rebase origin main
+          git push origin main
