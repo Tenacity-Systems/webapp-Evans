@@ -3,16 +3,12 @@ api:
   mongoSecretName: mongo-auth
   image:
     repository: docker.io/raspino47/tenacity-api
-    tag: "08f1a8588aef41bc8ca5d790b80be1c693efee96"
-
-
-
+    tag: "b2b69272646e10868c71239aa56e51dbc40373f3"
 frontend:
   replicas: 3
   image:
     repository: docker.io/raspino47/tenacity-frontend
-    tag: "08f1a8588aef41bc8ca5d790b80be1c693efee96"
-
+    tag: "b2b69272646e10868c71239aa56e51dbc40373f3"
 mongo:
   storage:
     className: standard
