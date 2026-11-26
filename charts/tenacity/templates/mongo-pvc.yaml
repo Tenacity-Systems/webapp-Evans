@@ -4,8 +4,9 @@ metadata:
   name: mongo-data
   namespace: {{ .Release.Namespace }}
 spec:
+  storageClassName: {{ .Values.mongo.storage.className }}
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi
+      storage: {{ .Values.mongo.storage.size }}
