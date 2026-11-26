@@ -18,6 +18,9 @@ spec:
       containers:
         - name: mongo
           image: mongo:8.0.4
+          envFrom:
+            - secretRef:
+                name: mongo-auth
           ports:
             - containerPort: 27017
           volumeMounts:
